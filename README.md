@@ -69,13 +69,3 @@ scroll.debug()
 ```
 
 `enable()` installs the scroll autocmds and initializes visible windows. `disable()` removes them and stops tracking. `check(win)` is available for integrations that need to request an update for a specific window.
-
-## Migration
-
-The former `builtin.scroll` module forwards to `require("scroll")`. Existing compatibility callers can continue to use that path when this plugin is installed; new configuration should call `require("scroll").setup(...)` directly.
-
-The dependency chain is:
-
-```text
-scroll.nvim -> animate.nvim
-```

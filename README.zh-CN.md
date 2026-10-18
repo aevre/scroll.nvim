@@ -69,13 +69,3 @@ scroll.debug()
 ```
 
 `enable()` 安装滚动 autocmd 并初始化可见窗口。`disable()` 删除这些 autocmd 并停止跟踪。需要为指定窗口请求更新的集成可以调用 `check(win)`。
-
-## 迁移
-
-原来的 `builtin.scroll` 模块会转发到 `require("scroll")`。安装该插件后，旧的兼容入口仍可继续使用；新的配置应直接调用 `require("scroll").setup(...)`。
-
-依赖链为：
-
-```text
-scroll.nvim -> animate.nvim
-```
