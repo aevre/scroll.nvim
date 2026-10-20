@@ -69,3 +69,7 @@ scroll.debug()
 ```
 
 `enable()` 安装滚动 autocmd 并初始化可见窗口。`disable()` 删除这些 autocmd 并停止跟踪。需要为指定窗口请求更新的集成可以调用 `check(win)`。
+
+## 开发
+
+在仓库根目录运行 `make check`。带 guard 的 `plugin/scroll.lua` 入口应用默认配置，滚动逻辑保留在 `lua/scroll/`。插件管理器随后以用户选项再次调用 `setup()` 时必须保持安全。

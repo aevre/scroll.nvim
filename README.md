@@ -69,3 +69,7 @@ scroll.debug()
 ```
 
 `enable()` installs the scroll autocmds and initializes visible windows. `disable()` removes them and stops tracking. `check(win)` is available for integrations that need to request an update for a specific window.
+
+## Development
+
+Run `make check` from the repository root. The guarded `plugin/scroll.lua` entrypoint applies defaults; scrolling logic stays under `lua/scroll/`. Keep `setup()` safe when a plugin manager calls it again with user options.
