@@ -7,19 +7,19 @@ A standalone smooth scrolling integration for Neovim. It animates vertical and h
 ## Requirements
 
 - Neovim 0.10 or newer.
-- [animate.nvim](https://codeberg.org/aevre/animate.nvim).
+- [animate.nvim](https://github.com/aevre/animate.nvim).
 
 ## Installation
 
-The canonical repository is hosted on Codeberg: <https://codeberg.org/aevre/scroll.nvim>.
+Available on Codeberg: <https://codeberg.org/aevre/scroll.nvim> and GitHub: <https://github.com/aevre/scroll.nvim>.
 
 With lazy.nvim:
 
 ```lua
 {
-  "https://codeberg.org/aevre/scroll.nvim",
+  "https://github.com/aevre/scroll.nvim",
   dependencies = {
-    "https://codeberg.org/aevre/animate.nvim",
+    "https://github.com/aevre/animate.nvim",
   },
   opts = {},
 }
@@ -54,7 +54,7 @@ require("scroll").setup({
 | `filter` | skips terminal buffers | Function receiving a buffer number. Return true to animate it. |
 | `debug` | `false` | Show internal state changes through notifications. |
 
-Animation options are passed to [animate.nvim](https://codeberg.org/aevre/animate.nvim). Set `vim.g.core_scroll = false`, `vim.b[buf].core_scroll = false`, or the corresponding `core_animate` variable to disable animation for a scope.
+Animation options are passed to [animate.nvim](https://github.com/aevre/animate.nvim). Set `vim.g.core_scroll = false`, `vim.b[buf].core_scroll = false`, or the corresponding `core_animate` variable to disable animation for a scope.
 
 ## API
 

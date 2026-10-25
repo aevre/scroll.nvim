@@ -7,19 +7,19 @@
 ## 环境要求
 
 - Neovim 0.10 或更新版本。
-- [animate.nvim](https://codeberg.org/aevre/animate.nvim)。
+- [animate.nvim](https://github.com/aevre/animate.nvim)。
 
 ## 安装
 
-项目托管于 Codeberg：<https://codeberg.org/aevre/scroll.nvim>。
+同时托管于 Codeberg：<https://codeberg.org/aevre/scroll.nvim> 和 GitHub：<https://github.com/aevre/scroll.nvim>。
 
 使用 lazy.nvim：
 
 ```lua
 {
-  "https://codeberg.org/aevre/scroll.nvim",
+  "https://github.com/aevre/scroll.nvim",
   dependencies = {
-    "https://codeberg.org/aevre/animate.nvim",
+    "https://github.com/aevre/animate.nvim",
   },
   opts = {},
 }
@@ -54,7 +54,7 @@ require("scroll").setup({
 | `filter` | 跳过 terminal buffer | 接收 buffer 编号的函数，返回 true 才执行动画。 |
 | `debug` | `false` | 通过通知显示内部状态变化。 |
 
-动画选项会传给 [animate.nvim](https://codeberg.org/aevre/animate.nvim)。设置 `vim.g.core_scroll = false`、`vim.b[buf].core_scroll = false` 或对应的 `core_animate` 变量，可以按作用域关闭动画。
+动画选项会传给 [animate.nvim](https://github.com/aevre/animate.nvim)。设置 `vim.g.core_scroll = false`、`vim.b[buf].core_scroll = false` 或对应的 `core_animate` 变量，可以按作用域关闭动画。
 
 ## API
 
