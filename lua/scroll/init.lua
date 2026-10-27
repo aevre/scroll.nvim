@@ -98,7 +98,7 @@ local function is_enabled(buf)
 		and buf
 		and not vim.o.paste
 		and vim.fn.reg_executing() == ""
-		and vim.fn.reg_recorded() == ""
+		and vim.fn.reg_recording() == ""
 		and (config.filter and config.filter(buf))
 		and Animate.enabled({ buf = buf, name = "scroll" })
 end
@@ -170,6 +170,7 @@ function State:valid()
 		and states[self.win] == self
 		and vim.api.nvim_win_is_valid(self.win)
 		and vim.api.nvim_buf_is_valid(self.buf)
+		and is_enabled(self.buf)
 		and vim.api.nvim_win_get_buf(self.win) == self.buf
 		and vim.api.nvim_buf_get_changedtick(self.buf) == self.changedtick
 end
