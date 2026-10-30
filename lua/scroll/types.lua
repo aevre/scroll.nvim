@@ -1,0 +1,31 @@
+---@class scroll.View
+---@field lnum integer
+---@field col integer
+---@field coladd integer
+---@field curswant integer
+---@field topline integer
+---@field topfill integer
+---@field leftcol integer
+---@field skipcol integer
+
+---@class scroll.AnimateConfig: animate.Config
+---@field delay? number
+
+---@class scroll.Config
+---@field enabled? boolean
+---@field animate? animate.Config
+---@field animate_repeat? scroll.AnimateConfig
+---@field filter? fun(buf: integer): boolean
+---@field debug? boolean
+
+---@class scroll.State
+---@field animation? animate.Animation
+---@field win integer
+---@field buf integer
+---@field view scroll.View
+---@field current scroll.View
+---@field target scroll.View
+---@field scrolloff number
+---@field changedtick number
+---@field last number
+---@field _wo table<string, any>

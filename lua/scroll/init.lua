@@ -1,48 +1,9 @@
 local Animate = require("animate")
+local config = require("scroll.config")
+local state = require("scroll.state")
 
 ---@class scroll
 local M = {}
-
----@alias scroll.View {topline:number, lnum:number}
-
----@class scroll.State
----@field animation? animate.Animation
----@field win integer
----@field buf integer
----@field view vim.fn.winsaveview.ret
----@field current vim.fn.winsaveview.ret
----@field target vim.fn.winsaveview.ret
----@field scrolloff number
----@field changedtick number
----@field last number
----@field _wo vim.wo
-local State = {}
-State.__index = State
-
----@class scroll.AnimateConfig: animate.Config
----@field delay? number
-
----@class scroll.Config
----@field enabled? boolean
----@field animate? animate.Config
----@field animate_repeat? scroll.AnimateConfig
----@field filter? fun(buf:integer): boolean
----@field debug? boolean
-local defaults = {
-	animate = {
-		duration = { step = 10, total = 200 },
-		easing = "linear",
-	},
-	animate_repeat = {
-		delay = 100,
-		duration = { step = 5, total = 50 },
-		easing = "linear",
-	},
-	filter = function(buf)
-		return vim.g.core_scroll ~= false and vim.b[buf].core_scroll ~= false and vim.bo[buf].buftype ~= "terminal"
-	end,
-	debug = false,
-}
 
 local mouse_scrolling = false
 local function keycode(key)
@@ -70,123 +31,37 @@ M.enabled = false
 local uv = vim.uv
 local debug_timer = uv.new_timer()
 local stats = { targets = 0, animating = 0, reset = 0, skipped = 0, scrolls = 0, mousescroll = 0 }
----@type scroll.Config
-local config = vim.deepcopy(defaults)
-
----@param opts? scroll.Config
-function M.setup(opts)
-	config = vim.tbl_deep_extend("force", vim.deepcopy(defaults), opts or {})
-	Animate.setup(config.animate)
-	if config.enabled == false then
-		M.disable()
-	else
-		M.enable()
-		if config.debug and debug_timer and not debug_timer:is_active() then
-			M.debug()
-		elseif not config.debug and debug_timer and debug_timer:is_active() then
-			debug_timer:stop()
-		end
-	end
-	return M
-end
-
----@type table<integer, scroll.State>
-local states = {}
 
 local function is_enabled(buf)
+	local current = config.get()
 	return M.enabled
 		and buf
 		and not vim.o.paste
 		and vim.fn.reg_executing() == ""
 		and vim.fn.reg_recording() == ""
-		and (config.filter and config.filter(buf))
+		and (current.filter and current.filter(buf))
 		and Animate.enabled({ buf = buf, name = "scroll" })
 end
 
----@param win integer
-function State.get(win)
-	local buf = vim.api.nvim_win_is_valid(win) and vim.api.nvim_win_get_buf(win)
-	if not buf or not is_enabled(buf) then
-		if states[win] ~= nil then
-			states[win]:stop()
-		end
-		states[win] = nil
-		return nil
-	end
-	---@cast buf integer
-
-	---@type vim.fn.winsaveview.ret
-	local view = vim.api.nvim_win_call(win, vim.fn.winsaveview)
-	local ret = states[win]
-	if not (ret and ret:valid()) then
-		if ret ~= nil then
-			ret:stop()
-		end
-		ret = setmetatable({}, State)
-		ret.buf = buf
-		ret._wo = {}
-		ret.changedtick = vim.api.nvim_buf_get_changedtick(buf)
-		ret.current = vim.deepcopy(view)
-		ret.last = 0
-		ret.target = vim.deepcopy(view)
-		ret.win = win
-	end
-
-	ret.scrolloff = ret._wo.scrolloff or vim.wo[win].scrolloff
-	ret.view = view
-	states[win] = ret
-	return ret
-end
-
-function State:stop()
-	self:wo()
-	if self.animation ~= nil then
-		self.animation:stop()
-		self.animation = nil
-	end
-end
-
----@param opts? vim.wo|{}
-function State:wo(opts)
-	if not opts then
-		if vim.api.nvim_win_is_valid(self.win) then
-			for k, v in pairs(self._wo) do
-				---@diagnostic disable-next-line: assign-type-mismatch
-				vim.wo[self.win][k] = v
-			end
-		end
-		self._wo = {}
-		return
-	else
-		for k, v in pairs(opts) do
-			self._wo[k] = self._wo[k] or vim.wo[self.win][k]
-			vim.wo[self.win][k] = v
-		end
-	end
-end
-
-function State:valid()
+state.configure(is_enabled, function()
 	return M.enabled
-		and states[self.win] == self
-		and vim.api.nvim_win_is_valid(self.win)
-		and vim.api.nvim_buf_is_valid(self.buf)
-		and is_enabled(self.buf)
-		and vim.api.nvim_win_get_buf(self.win) == self.buf
-		and vim.api.nvim_buf_get_changedtick(self.buf) == self.changedtick
-end
+end)
 
-function State:update()
-	if vim.api.nvim_win_is_valid(self.win) then
-		self.current = vim.api.nvim_win_call(self.win, vim.fn.winsaveview)
+---@param opts? scroll.Config
+function M.setup(opts)
+	local current = config.setup(opts)
+	Animate.setup(current.animate)
+	if current.enabled == false then
+		M.disable()
+	else
+		M.enable()
+		if current.debug and debug_timer and not debug_timer:is_active() then
+			M.debug()
+		elseif not current.debug and debug_timer and debug_timer:is_active() then
+			debug_timer:stop()
+		end
 	end
-end
-
----@param win integer
-function State.reset(win)
-	if states[win] ~= nil then
-		states[win]:stop()
-		states[win] = nil
-	end
+	return M
 end
 
 function M.enable()
@@ -194,14 +69,14 @@ function M.enable()
 		return
 	end
 	M.enabled = true
-	states = {}
+	state.clear()
 
-	if config.debug then
+	if config.get().debug then
 		M.debug()
 	end
 
 	for _, win in ipairs(vim.api.nvim_list_wins()) do
-		State.get(win)
+		state.get(win)
 	end
 
 	local group = vim.api.nvim_create_augroup("core_scroll", { clear = true })
@@ -209,7 +84,6 @@ function M.enable()
 	on_key("<ScrollWheelDown>", function()
 		mouse_scrolling = true
 	end)
-
 	on_key("<ScrollWheelUp>", function()
 		mouse_scrolling = true
 	end)
@@ -218,7 +92,7 @@ function M.enable()
 		group = group,
 		callback = vim.schedule_wrap(function(ev)
 			for _, win in ipairs(vim.fn.win_findbuf(ev.buf)) do
-				State.get(win)
+				state.get(win)
 			end
 		end),
 	})
@@ -227,7 +101,7 @@ function M.enable()
 		group = group,
 		callback = function(ev)
 			for _, win in ipairs(vim.fn.win_findbuf(ev.buf)) do
-				State.get(win)
+				state.get(win)
 			end
 		end,
 	})
@@ -236,8 +110,9 @@ function M.enable()
 		group = group,
 		callback = vim.schedule_wrap(function(ev)
 			for _, win in ipairs(vim.fn.win_findbuf(ev.buf)) do
-				if states[win] ~= nil then
-					states[win]:update()
+				local current = state.all()[win]
+				if current then
+					current:update()
 				end
 			end
 		end),
@@ -248,17 +123,17 @@ function M.enable()
 		callback = function(ev)
 			local win = tonumber(ev.match) --[[@as integer|nil]]
 			if win then
-				State.reset(win)
+				state.reset(win)
 			end
 		end,
 	})
 
-	vim.api.nvim_create_autocmd({ "CmdlineLeave" }, {
+	vim.api.nvim_create_autocmd("CmdlineLeave", {
 		group = group,
 		callback = function(ev)
 			if (ev.file == "/" or ev.file == "?") and vim.o.incsearch then
 				for _, win in ipairs(vim.fn.win_findbuf(ev.buf)) do
-					State.reset(win)
+					state.reset(win)
 				end
 			end
 		end,
@@ -284,10 +159,7 @@ function M.disable()
 	end
 	M.enabled = false
 	mouse_scrolling = false
-	for _, state in pairs(states) do
-		state:stop()
-	end
-	states = {}
+	state.clear()
 	if on_key_ns then
 		vim.on_key(nil, on_key_ns)
 		on_key_ns = nil
@@ -300,8 +172,9 @@ function M.disable()
 end
 
 ---@param win integer
----@param from vim.fn.winsaveview.ret
----@param to vim.fn.winsaveview.ret
+---@param from scroll.View
+---@param to scroll.View
+---@return integer
 local function scroll_lines(win, from, to)
 	if from.topline == to.topline then
 		return math.abs(from.topfill - to.topfill)
@@ -324,106 +197,95 @@ local function scroll_lines(win, from, to)
 end
 
 ---@param win integer
----@private
 function M.check(win)
-	local state = State.get(win)
-	if not state then
+	local current = state.get(win)
+	if not current then
 		return
 	end
-
-	if vim.wo[state.win].scrollbind and vim.api.nvim_get_current_win() ~= state.win then
-		state:stop()
+	if vim.wo[current.win].scrollbind and vim.api.nvim_get_current_win() ~= current.win then
+		current:stop()
 		return
 	end
-
 	if mouse_scrolling then
-		state:stop()
+		current:stop()
 		mouse_scrolling = false
 		stats.mousescroll = stats.mousescroll + 1
-		state.current = vim.deepcopy(state.view)
+		current.current = vim.deepcopy(current.view)
 		return
-	elseif math.abs(state.view.topline - state.current.topline) <= 1 then
+	elseif math.abs(current.view.topline - current.current.topline) <= 1 then
 		stats.skipped = stats.skipped + 1
-		state.current = vim.deepcopy(state.view)
+		current.current = vim.deepcopy(current.view)
 		return
 	end
 
 	stats.scrolls = stats.scrolls + 1
 	stats.targets = stats.targets + 1
-	state.target = vim.deepcopy(state.view)
-	state:stop()
-	state:wo({ virtualedit = "all", scrolloff = 0 })
+	current.target = vim.deepcopy(current.view)
+	current:stop()
+	current:wo({ virtualedit = "all", scrolloff = 0 })
 
 	local now = uv.hrtime()
-	local repeat_delta = (now - state.last) / 1e6
-	state.last = now
-
-	---@diagnostic disable-next-line: need-check-nil
-	local is_repeat = repeat_delta <= config.animate_repeat.delay
-	local animation_config = is_repeat and config.animate_repeat or config.animate
+	local repeat_delta = (now - current.last) / 1e6
+	current.last = now
+	local current_config = config.get()
+	local is_repeat = repeat_delta <= current_config.animate_repeat.delay
+	local animation_config = is_repeat and current_config.animate_repeat or current_config.animate
 	local opts = vim.tbl_deep_extend("force", vim.deepcopy(animation_config or {}), {
 		int = true,
 		id = ("scroll%s%d"):format(is_repeat and "_repeat_" or "_", win),
-		buf = state.buf,
+		buf = current.buf,
 	}) --[[@as animate.Opts]]
 
 	local scrolls = 0
 	local col_from, col_to = 0, 0
 	local move_from, move_to = 0, 0
-	vim.api.nvim_win_call(state.win, function()
+	vim.api.nvim_win_call(current.win, function()
 		move_to = vim.fn.winline()
-		vim.fn.winrestview(state.current)
+		---@diagnostic disable-next-line: param-type-mismatch
+		vim.fn.winrestview(current.current)
 		move_from = vim.fn.winline()
-		state:update()
-		scrolls = scroll_lines(state.win, state.current, state.target)
-		col_from = vim.fn.virtcol({ state.current.lnum, state.current.col }) --[[@as integer]]
-		col_to = vim.fn.virtcol({ state.target.lnum, state.target.col }) --[[@as integer]]
+		current:update()
+		scrolls = scroll_lines(current.win, current.current, current.target)
+		col_from = vim.fn.virtcol({ current.current.lnum, current.current.col }) --[[@as integer]]
+		col_to = vim.fn.virtcol({ current.target.lnum, current.target.col }) --[[@as integer]]
 	end)
 
-	local down = state.target.topline > state.current.topline
-		or (state.target.topline == state.current.topline and state.target.topfill < state.current.topfill)
-
+	local down = current.target.topline > current.current.topline
+		or (current.target.topline == current.current.topline and current.target.topfill < current.current.topfill)
 	local scrolled = 0
-
-	state.animation = Animate(0, scrolls, function(value, ctx)
-		if not state:valid() then
-			state:stop()
+	current.animation = Animate(0, scrolls, function(value, ctx)
+		if not current:valid() then
+			current:stop()
 			return
 		end
-
 		vim.api.nvim_win_call(win, function()
 			if ctx.done then
-				vim.fn.winrestview(state.target)
-				state:update()
-				state:stop()
+				---@diagnostic disable-next-line: param-type-mismatch
+				vim.fn.winrestview(current.target)
+				current:update()
+				current:stop()
 				return
 			end
 			local count = vim.v.count
 			local commands = {}
-
 			local scroll_target = math.floor(value)
 			local scroll = scroll_target - scrolled
 			if scroll > 0 then
 				scrolled = scrolled + scroll
 				commands[#commands + 1] = ("%d%s"):format(scroll, down and SCROLL_DOWN or SCROLL_UP)
 			end
-
 			local move = math.floor(value * math.abs(move_to - move_from) / scrolls)
 			local move_target = move_from + ((move_to < move_from) and -1 or 1) * move
 			commands[#commands + 1] = ("%dH"):format(move_target)
-
 			local virtcol = math.floor(col_from + (col_to - col_from) * value / scrolls)
 			commands[#commands + 1] = ("%d|"):format(virtcol + 1)
-
 			vim.cmd(("keepjumps normal! %s"):format(table.concat(commands, "")))
-
 			if vim.v.count ~= count then
 				local cursor = vim.api.nvim_win_get_cursor(win)
 				vim.cmd(("keepjumps normal! %dzh"):format(count))
 				vim.api.nvim_win_set_cursor(win, cursor)
 			end
-
-			state:update()
+			current:update()
 		end)
 	end, opts)
 end
@@ -438,7 +300,7 @@ function M.debug()
 	end
 	local last = {}
 	debug_timer:start(50, 50, function()
-		local data = vim.tbl_extend("force", { stats = stats }, states)
+		local data = vim.tbl_extend("force", { stats = stats }, state.all())
 		for key, value in pairs(data) do
 			if not vim.deep_equal(last[key], value) then
 				vim.notify(vim.inspect(value))
