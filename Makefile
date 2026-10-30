@@ -11,7 +11,7 @@ fmt-check:
 lint:
 	selene $(LUA_FILES)
 
-check: fmt-check lint
+check: fmt-check lint test
 
 test:
 	NVIM_BIN="$${NVIM_BIN:-nvim}"; "$$NVIM_BIN" --headless -u NONE --cmd 'set rtp+=.,../animate.nvim' -l tests/recording.lua
